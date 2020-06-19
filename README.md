@@ -6,11 +6,10 @@
 
 用户也可以基于自己的实际需要，自定义注解。
 
+[![Build Status](https://travis-ci.com/houbb/sensitive.svg?branch=master)](https://travis-ci.com/houbb/sensitive)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.houbb/sensitive/badge.svg)](http://mvnrepository.com/artifact/com.github.houbb/sensitive)
-[![Build Status](https://www.travis-ci.org/houbb/sensitive.svg?branch=master)](https://www.travis-ci.org/houbb/sensitive?branch=master)
-[![Coverage Status](https://coveralls.io/repos/github/houbb/sensitive/badge.svg?branch=master)](https://coveralls.io/github/houbb/sensitive?branch=master)
 
-> [变更日志](doc/CHANGE_LOG.md)
+> [变更日志](CHANGE_LOG.md)
 
 ## 日志脱敏
 
@@ -44,11 +43,13 @@
 
 5. 支持用户自定义注解。
 
-## v0.0.6 新特性
+6. 支持基于 FastJSON 直接生成脱敏后的 json
 
-- 支持直接生成脱敏后的 JSON
+## v0.0.10 变更
 
-避免创建中间对象，进一步提升性能。
+1. 更新 fast-json 为最新版本依赖（安全问题）
+
+2. 更新 heaven 版本依赖为最新
 
 # 快速开始
 
@@ -64,9 +65,20 @@ Maven 3.x
 <dependency>
     <groupId>com.github.houbb</groupId>
     <artifactId>sensitive-core</artifactId>
-    <version>0.0.5</version>
+    <version>0.0.10</version>
 </dependency>
 ```
+
+## 核心 api 简介
+
+`SensitiveUtil` 工具类的核心方法列表如下：
+
+| 序号 | 方法 | 参数 | 结果 | 说明 |
+|:---|:---|:---|:---|:---|
+| 1 | desCopy() | 目标对象 | 深度拷贝脱敏对象 | 适应性更强 |
+| 2 | desJson() | 目标对象 | 脱敏对象 json | 性能较好 |
+| 3 | desCopyCollection() | 目标对象集合 | 深度拷贝脱敏对象集合 | |
+| 4 | desJsonCollection() | 目标对象集合 | 脱敏对象 json 集合 | |
 
 ## 定义对象
 
@@ -674,6 +686,71 @@ public void sensitiveUserCollectionJsonTest() {
 
 如果有这种需求，建议使用原来的 `desCopy(Object)`。
 
+# 针对集合的处理
+
+`v0.0.7` 支持的新特性，便于用户处理集合相关的脱敏。
+
+如果列表为空，则直接返回空列表。
+
+更多测试代码参见 [SensitiveUtilCollectionTest.java](https://github.com/houbb/sensitive/blob/release_0.0.7/sensitive-test/src/test/java/com/github/houbb/sensitive/test/core/sensitive/collection/SensitiveUtilCollectionTest.java)
+
+## 集合脱敏-对象拷贝
+
+- List<T> desCopyCollection(Collection<T> collection)
+
+返回脱敏后的对象集合
+
+```java
+List<User> userList = DataPrepareTest.buildUserList();
+List<User> sensitiveList = SensitiveUtil.desCopyCollection(userList);
+Assert.assertEquals("[User{username='脱*君', idCard='123456**********34', password='null', email='123**@qq.com', phone='188****8888'}, User{username='集**试', idCard='123456**********34', password='null', email='123**@qq.com', phone='188****8888'}]", sensitiveList.toString());
+```
+
+## 集合脱敏-json
+
+- List<String> desJsonCollection(Collection<?> collection)
+
+返回脱敏后的 json 列表
+
+```java
+List<User> userList = DataPrepareTest.buildUserList();
+
+List<String> sensitiveJsonList = SensitiveUtil.desJsonCollection(userList);
+Assert.assertEquals("[{\"email\":\"123**@qq.com\",\"idCard\":\"123456**********34\",\"phone\":\"188****8888\",\"username\":\"脱*君\"}, {\"email\":\"123**@qq.com\",\"idCard\":\"123456**********34\",\"phone\":\"188****8888\",\"username\":\"集**试\"}]", sensitiveJsonList.toString());
+```
+
+# 脱敏引导类
+
+为了配置的灵活性，引入了引导类。
+
+## 核心 api 简介
+
+`SensitiveBs` 引导类的核心方法列表如下：
+
+| 序号 | 方法 | 参数 | 结果 | 说明 |
+|:---|:---|:---|:---|:---|
+| 1 | desCopy() | 目标对象 | 深度拷贝脱敏对象 | 适应性更强 |
+| 2 | desJson() | 目标对象 | 脱敏对象 json | 性能较好 |
+
+## 使用示例
+
+使用方式和工具类一致，示意如下：
+
+```java
+SensitiveBs.newInstance().desCopy(user);
+```
+
+## 配置深度拷贝实现
+
+默认的使用 FastJson 进行对象的深度拷贝，等价于：
+
+```java
+SensitiveBs.newInstance()
+                .deepCopy(DeepCopies.json())
+                .desJson(user);
+```
+
+后期准备引入其他深度拷贝替代基于 json 的深度拷贝，提升性能。
 
 # 需求 & BUGS
 

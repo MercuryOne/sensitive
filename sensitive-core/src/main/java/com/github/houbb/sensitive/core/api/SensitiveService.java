@@ -3,6 +3,7 @@ package com.github.houbb.sensitive.core.api;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.serializer.ContextValueFilter;
 import com.github.houbb.heaven.annotation.ThreadSafe;
+import com.github.houbb.heaven.support.cache.impl.ClassFieldListCache;
 import com.github.houbb.heaven.util.lang.ObjectUtil;
 import com.github.houbb.heaven.util.lang.reflect.ClassTypeUtil;
 import com.github.houbb.heaven.util.lang.reflect.ClassUtil;
@@ -12,9 +13,7 @@ import com.github.houbb.sensitive.annotation.Sensitive;
 import com.github.houbb.sensitive.annotation.SensitiveEntry;
 import com.github.houbb.sensitive.annotation.metadata.SensitiveCondition;
 import com.github.houbb.sensitive.annotation.metadata.SensitiveStrategy;
-import com.github.houbb.sensitive.api.ICondition;
-import com.github.houbb.sensitive.api.ISensitive;
-import com.github.houbb.sensitive.api.IStrategy;
+import com.github.houbb.sensitive.api.*;
 import com.github.houbb.sensitive.api.impl.SensitiveStrategyBuiltIn;
 import com.github.houbb.sensitive.core.api.context.SensitiveContext;
 import com.github.houbb.sensitive.core.exception.SensitiveRuntimeException;
@@ -43,13 +42,14 @@ public class SensitiveService<T> implements ISensitive<T> {
 
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public T desCopy(T object) {
+    public T desCopy(T object, final ISensitiveConfig config) {
         //1. 初始化对象
         final Class clazz = object.getClass();
         final SensitiveContext context = new SensitiveContext();
 
         //2. 深度复制对象
-        final T copyObject = BeanUtil.deepCopy(object);
+        final IDeepCopy deepCopy = config.deepCopy();
+        final T copyObject = deepCopy.deepCopy(object);
 
         //3. 处理
         handleClassField(context, copyObject, clazz);
@@ -57,7 +57,7 @@ public class SensitiveService<T> implements ISensitive<T> {
     }
 
     @Override
-    public String desJson(T object) {
+    public String desJson(final T object, final ISensitiveConfig config) {
         if(ObjectUtil.isNull(object)) {
             return JSON.toJSONString(object);
         }
@@ -79,7 +79,7 @@ public class SensitiveService<T> implements ISensitive<T> {
                                   final Object copyObject,
                                   final Class clazz) {
         // 每一个实体对应的字段，只对当前 clazz 生效。
-        List<Field> fieldList = ClassUtil.getAllFieldList(clazz);
+        List<Field> fieldList = ClassFieldListCache.getInstance().get(clazz);
         context.setAllFieldList(fieldList);
         context.setCurrentObject(copyObject);
 
